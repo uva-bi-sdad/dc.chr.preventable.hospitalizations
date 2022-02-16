@@ -13,4 +13,4 @@ LazyData: true
 Depends:
     R (>= 3.5.0)
 Imports: dataverse, readr, jsonlite
-    
+RoxygenNote: 7.1.2
