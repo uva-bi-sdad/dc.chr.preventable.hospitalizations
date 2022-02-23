@@ -1,0 +1,171 @@
+---
+title: "Drug Visits + Preventable Hospitalizations"
+output: html_document
+---
+
+# imports
+
+```{r}
+library(sf)
+library(DBI)
+library(data.table)
+library(tidycensus)
+library(dplyr)
+library(tidyr)
+library(httr)
+library(readxl)
+library(stringr)
+```
+
+# Preventable Hospitalizations @ health district level - NOT SURE WHERE COUNTY LEVEL CAME FROM
+
+```{r}
+# get health district info
+health_district <- read.csv("/project/biocomplexity/sdad/projects_data/vdh/va_county_to_hd.csv")
+health_district$county_id <- as.character(health_district$county_id)
+
+con <- get_db_conn(db_pass = "rsu8zvrsu8zv")
+health_district_geoids <- st_read(con, query = "SELECT * FROM dc_geographies.va_hd_vdh_2021_health_district_geo_names")
+preventable_hospitalization <- st_read(con, query = "SELECT * FROM dc_health_behavior_diet.va_ct_chr_2015_2021_preventable_hospitalizations")
+DBI::dbDisconnect(con)
+
+health_district_2 <- left_join(health_district, health_district_geoids, by = c("health_district" = "region_name"))
+
+# get uninsured pop
+# C27006_004E + C27006_007E + C27006_011E + C27006_014E + C27006_017E + C27006_020E
+va.co.19 <- get_acs(geography = "county",
+                 year = 2019,
+                 variables = c(pop1 = "C27006_004", pop2 = "C27006_007", pop3 = "C27006_011",
+                               pop4 = "C27006_014", pop5 = "C27006_017", pop6 = "C27006_020"),
+                 state = "VA",
+                 survey = "acs5",
+                 output = "wide",
+                 geometry = F)
+va.co.19$tpopE <- va.co.19$pop1E + va.co.19$pop2E + va.co.19$pop3E + va.co.19$pop4E + va.co.19$pop5E + va.co.19$pop6E
+va.co.18 <- get_acs(geography = "county",
+                 year = 2018,
+                 variables = c(pop1 = "C27006_004", pop2 = "C27006_007", pop3 = "C27006_011",
+                               pop4 = "C27006_014", pop5 = "C27006_017", pop6 = "C27006_020"),
+                 state = "VA",
+                 survey = "acs5",
+                 output = "wide",
+                 geometry = F)
+va.co.18$tpopE <- va.co.18$pop1E + va.co.18$pop2E + va.co.18$pop3E + va.co.18$pop4E + va.co.18$pop5E + va.co.18$pop6E
+va.co.17 <- get_acs(geography = "county",
+                 year = 2017,
+                 variables = c(pop1 = "C27006_004", pop2 = "C27006_007", pop3 = "C27006_011",
+                               pop4 = "C27006_014", pop5 = "C27006_017", pop6 = "C27006_020"),
+                 state = "VA",
+                 survey = "acs5",
+                 output = "wide",
+                 geometry = F)
+va.co.17$tpopE <- va.co.17$pop1E + va.co.17$pop2E + va.co.17$pop3E + va.co.17$pop4E + va.co.17$pop5E + va.co.17$pop6E
+va.co.16 <- get_acs(geography = "county",
+                 year = 2016,
+                 variables = c(pop1 = "C27006_004", pop2 = "C27006_007", pop3 = "C27006_011",
+                               pop4 = "C27006_014", pop5 = "C27006_017", pop6 = "C27006_020"),
+                 state = "VA",
+                 survey = "acs5",
+                 output = "wide",
+                 geometry = F)
+va.co.16$tpopE <- va.co.16$pop1E + va.co.16$pop2E + va.co.16$pop3E + va.co.16$pop4E + va.co.16$pop5E + va.co.16$pop6E
+va.co.15 <- get_acs(geography = "county",
+                 year = 2015,
+                 variables = c(pop1 = "C27006_004", pop2 = "C27006_007", pop3 = "C27006_011",
+                               pop4 = "C27006_014", pop5 = "C27006_017", pop6 = "C27006_020"),
+                 state = "VA",
+                 survey = "acs5",
+                 output = "wide",
+                 geometry = F)
+va.co.15$tpopE <- va.co.15$pop1E + va.co.15$pop2E + va.co.15$pop3E + va.co.15$pop4E + va.co.15$pop5E + va.co.15$pop6E
+
+# get fraction of pop within each health district that resides wtihin a county
+hd.19 <- merge(va.co.19[, c("tpopE", "GEOID", "NAME")], health_district_2[, c("geoid", "county_id", "health_district")], by.x = "GEOID", by.y = "county_id") %>%
+  group_by(geoid, health_district) %>%
+  mutate(frac_pop = tpopE/sum(tpopE))
+hd.18 <- merge(va.co.18[, c("tpopE", "GEOID", "NAME")], health_district_2[, c("geoid", "county_id", "health_district")], by.x = "GEOID", by.y = "county_id") %>%
+  group_by(geoid, health_district) %>%
+  mutate(frac_pop = tpopE/sum(tpopE))
+hd.17 <- merge(va.co.17[, c("tpopE", "GEOID", "NAME")], health_district_2[, c("geoid", "county_id", "health_district")], by.x = "GEOID", by.y = "county_id") %>%
+  group_by(geoid, health_district) %>%
+  mutate(frac_pop = tpopE/sum(tpopE))
+hd.16 <- merge(va.co.16[, c("tpopE", "GEOID", "NAME")], health_district_2[, c("geoid", "county_id", "health_district")], by.x = "GEOID", by.y = "county_id") %>%
+  group_by(geoid, health_district) %>%
+  mutate(frac_pop = tpopE/sum(tpopE))
+hd.15 <- merge(va.co.15[, c("tpopE", "GEOID", "NAME")], health_district_2[, c("geoid", "county_id", "health_district")], by.x = "GEOID", by.y = "county_id") %>%
+  group_by(geoid, health_district) %>%
+  mutate(frac_pop = tpopE/sum(tpopE))
+
+# get vector of names
+vec <- vector(length = length(preventable_hospitalization$region_name))
+for (i in 1:length(preventable_hospitalization$region_name))
+{
+  vec[i] <- grep(preventable_hospitalization$region_name[i], hd.19$NAME, ignore.case = TRUE, value = TRUE)
+}
+preventable_hospitalization$region_name <- vec
+
+# not sure why i didn't just do this all together, but formatting each year separately below???
+# I think because of the varying populations across the years (uses the same pop for 2019-2021), separate for 2018, 2017, etc.
+hd.19.2 <- merge(hd.19, preventable_hospitalization, by.x = "NAME", by.y = "region_name") %>%
+  filter(year %in% c(2019:2021)) %>%
+  group_by(year, health_district) %>%
+  summarise(value = sum(frac_pop * value, na.rm = T)) %>%
+  mutate(measure_type = "rate per 100k",
+         measure = "prevent_hosp_rate",
+         region_type = "health district",
+         measure_units = as.character(NA)) %>%
+  rename(region_name = health_district) %>%
+  merge(health_district_geoids) %>%
+  relocate("geoid", "region_type", "region_name", "year", "measure", "value", "measure_type", "measure_units")
+hd.18.2 <- merge(hd.18, preventable_hospitalization, by.x = "NAME", by.y = "region_name") %>%
+  filter(year %in% 2018) %>%
+  group_by(year, health_district) %>%
+  summarise(value = sum(frac_pop * value, na.rm = T)) %>%
+  mutate(measure_type = "rate per 100k",
+         measure = "prevent_hosp_rate",
+         region_type = "health district",
+         measure_units = as.character(NA)) %>%
+  rename(region_name = health_district) %>%
+  merge(health_district_geoids) %>%
+  relocate("geoid", "region_type", "region_name", "year", "measure", "value", "measure_type", "measure_units")
+hd.17.2 <- merge(hd.17, preventable_hospitalization, by.x = "NAME", by.y = "region_name") %>%
+  filter(year %in% 2017) %>%
+  group_by(year, health_district) %>%
+  summarise(value = sum(frac_pop * value, na.rm = T)) %>%
+  mutate(measure_type = "rate per 100k",
+         measure = "prevent_hosp_rate",
+         region_type = "health district",
+         measure_units = as.character(NA)) %>%
+  rename(region_name = health_district) %>%
+  merge(health_district_geoids) %>%
+  relocate("geoid", "region_type", "region_name", "year", "measure", "value", "measure_type", "measure_units")
+hd.16.2 <- merge(hd.16, preventable_hospitalization, by.x = "NAME", by.y = "region_name") %>%
+  filter(year %in% 2016) %>%
+  group_by(year, health_district) %>%
+  summarise(value = sum(frac_pop * value, na.rm = T)) %>%
+  mutate(measure_type = "rate per 100k",
+         measure = "prevent_hosp_rate",
+         region_type = "health district",
+         measure_units = as.character(NA)) %>%
+  rename(region_name = health_district) %>%
+  merge(health_district_geoids) %>%
+  relocate("geoid", "region_type", "region_name", "year", "measure", "value", "measure_type", "measure_units")
+hd.15.2 <- merge(hd.15, preventable_hospitalization, by.x = "NAME", by.y = "region_name") %>%
+  filter(year %in% 2015) %>%
+  group_by(year, health_district) %>%
+  summarise(value = sum(frac_pop * value, na.rm = T)) %>%
+  mutate(measure_type = "rate per 100k",
+         measure = "prevent_hosp_rate",
+         region_type = "health district",
+         measure_units = as.character(NA)) %>%
+  rename(region_name = health_district) %>%
+  merge(health_district_geoids) %>%
+  relocate("geoid", "region_type", "region_name", "year", "measure", "value", "measure_type", "measure_units")
+
+all.hd.data <- rbind(hd.19.2, hd.18.2, hd.17.2, hd.16.2, hd.15.2)
+
+# send to db
+con <- get_db_conn(db_pass = "rsu8zvrsu8zv")
+dc_dbWriteTable(con, "dc_health_behavior_diet", "va_hd_chr_2015_2021_preventable_hospitalizations", all.hd.data)
+dbDisconnect(con)
+```
