@@ -1,0 +1,27 @@
+{
+  "name": "dc.chr.preventable.hospitalizations",
+  "data": [
+    {
+      "name": "preventable_hospitalizations",
+      "variables": "prevent_hosp_rate",
+      "file": "va_hdct_chr_2015_2021_preventable_hospitalizations.csv.xz",
+      "size": 6204,
+      "md5": "3c9bd9779337c69b7141bc7284b9ff4c"
+    }
+  ],
+  "distributions": {
+    "dataverse": {
+      "id": 55114,
+      "doi": "doi:10.18130/V3/SWK71R",
+      "server": "https://dataverse.lib.virginia.edu/",
+      "data": [
+        {
+          "file": "va_hdct_chr_2015_2021_preventable_hospitalizations.csv.xz",
+          "id": 55854,
+          "size": 6204,
+          "md5": "3c9bd9779337c69b7141bc7284b9ff4c"
+        }
+      ]
+    }
+  }
+}
