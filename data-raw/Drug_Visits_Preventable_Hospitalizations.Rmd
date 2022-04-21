@@ -381,4 +381,11 @@ unique(a$measure)
 a
 ```
 
+```{r}
+## CHANGE NAMES
+
+data <- read.csv("~/git/dc.chr.preventable.hospitalizations/data/va_hdct_chr_2015_2021_preventable_hospitalizations.csv.xz") %>% mutate(geoid = ifelse(region_type == "health district", paste0("51_hd_", geoid), geoid))
+readr::write_csv(data,
+                 xzfile("~/git/dc.chr.preventable.hospitalizations/data/va_hdct_chr_2015_2021_preventable_hospitalizations.csv.xz", compression = 9))
+```
 
